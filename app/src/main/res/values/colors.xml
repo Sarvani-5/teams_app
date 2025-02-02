@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2E1437</color>
+    <color name="colorPrimaryDark">#1E0D24</color>
+    <color name="colorAccent">#9C27B0</color>
+
+    <!-- Additional colors for your app -->
+    <color name="textColorPrimary">#212121</color>
+    <color name="textColorSecondary">#757575</color>
+    <color name="dividerColor">#BDBDBD</color>
+    <color name="cardBackground">#FFFFFF</color>
+    <color name="windowBackground">#F5F5F5</color>
+
+    <!-- Team member card colors -->
+    <color name="memberCardBackground">#FFFFFF</color>
+    <color name="memberNameColor">#212121</color>
+    <color name="memberRoleColor">#757575</color>
+    <color name="primary">#2196F3</color>
+    <!-- Darker variant for status bar and app bar -->
+    <color name="primary_dark">#1976D2</color>
+    <!-- Accent color for interactive elements -->
+    <color name="accent">#FF4081</color>
+
+    <!-- Additional useful colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="light_gray">#F5F5F5</color>
+    <color name="secondary">#03DAC6</color> <!-- Example secondary color -->
+    <color name="secondary_dark">#018786</color>
+</resources>
