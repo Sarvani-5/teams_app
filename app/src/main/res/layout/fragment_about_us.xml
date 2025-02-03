@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,16 +13,35 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="About Tamil Roots"
-            android:textSize="24sp"
+            android:text="Tamil Roots"
+            android:textSize="26sp"
             android:textStyle="bold"
-            android:layout_marginBottom="16dp"/>
+            android:textColor="@color/colorPrimary"
+            android:gravity="center"
+            android:layout_marginBottom="12dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Your about us content here"
-            android:textSize="16sp"/>
+            android:text="Unveiling Tamil Nadu’s Timeless Heritage"
+            android:textSize="18sp"
+            android:textStyle="italic"
+            android:textColor="@color/black"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tamil Roots is your gateway to the rich and diverse heritage of Tamil Nadu. From the majestic temples of Thanjavur to the intricate craftsmanship of Kanchipuram silk, our app lets you explore the cultural essence of each city.
+
+Immerse yourself in the world of indigenous arts, traditional crafts, and hidden historical gems. Discover iconic heritage products like Madurai’s fragrant jasmine, Chettinad’s handcrafted tiles, and the world-famous bronze idols of Swamimalai.
+
+Connect with artisans, learn the stories behind Tamil Nadu’s timeless traditions, and embark on a journey through centuries of artistry and culture.
+
+Experience the soul of Tamil Nadu with Tamil Roots!"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"/>
 
     </LinearLayout>
 </ScrollView>
