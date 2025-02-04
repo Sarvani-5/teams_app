@@ -107,7 +107,6 @@ class TeamMembersFragment : Fragment() {
 
     private fun setupMemberCards(view: View) {
         val cardIds = listOf(R.id.member1Card, R.id.member2Card, R.id.member3Card)
-
         cardIds.forEachIndexed { index, cardId ->
             view.findViewById<CardView>(cardId).apply {
                 // Regular click to navigate to details
