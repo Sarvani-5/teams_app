@@ -1,51 +1,149 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="#F0F4F8">
 
-    <LinearLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:background="@android:color/white"
+        app:elevation="6dp">
 
-        <TextView
+
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tamil Roots - Project Description"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:textColor="@color/colorPrimary"
-            android:gravity="center"
-            android:layout_marginBottom="12dp"/>
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Bridging the Past, Present and Future of Tamil Nadu’s Heritage"
-            android:textSize="18sp"
-            android:textStyle="italic"
-            android:textColor="@color/black"
-            android:gravity="center"
-            android:layout_marginBottom="20dp"/>
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                android:layout_marginBottom="16dp"
+                android:animateLayoutChanges="true">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Tamil Roots is an innovative Indigenous Heritage Exploration App designed to showcase the vibrant cultural heritage of Tamil Nadu. Our platform allows users to explore the historical significance, unique crafts, and heritage products of various cities across the state.
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
 
-✨ **Key Features:**
-✔ Discover iconic heritage products like Kanchipuram Silk, Tanjore Paintings, Madurai Jasmine and more.
-✔ Explore historical monuments, ancient temples, and architectural marvels.
-✔ Connect with artisans and learn about traditional craftsmanship.
-✔ Engage in immersive storytelling to experience Tamil Nadu’s rich legacy.
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tamil Roots"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="#1A237E"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="sans-serif-black"
+                        android:transitionName="title_transition"/>
 
-Whether you're a heritage enthusiast, a traveler, or someone who loves Tamil culture, Tamil Roots takes you on a captivating journey through time, celebrating the traditions that make Tamil Nadu unique.
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Bridging the Past, Present and Future of Tamil Nadu's Heritage"
+                        android:textSize="18sp"
+                        android:textStyle="italic"
+                        android:textColor="#37474F"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"
+                        android:fontFamily="sans-serif-light"/>
 
-Start your exploration today and rediscover Tamil Nadu’s timeless heritage!"
-            android:textSize="16sp"
-            android:lineSpacingExtra="4dp"/>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:background="#E0E0E0"
+                        android:layout_marginBottom="16dp"/>
 
-    </LinearLayout>
-</ScrollView>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Tamil Roots is an innovative Indigenous Heritage Exploration App designed to showcase the vibrant cultural heritage of Tamil Nadu."
+                            android:textSize="16sp"
+                            android:textColor="#37474F"
+                            android:layout_marginBottom="16dp"
+                            android:fontFamily="sans-serif-light"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="🌟 Key Features:"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#1A237E"
+                            android:layout_marginBottom="8dp"/>
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp">
+
+                            <com.google.android.material.chip.Chip
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Heritage Products"
+                                style="@style/Widget.MaterialComponents.Chip.Choice"/>
+
+                            <com.google.android.material.chip.Chip
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Historical Monuments"
+                                style="@style/Widget.MaterialComponents.Chip.Choice"/>
+
+                            <com.google.android.material.chip.Chip
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Artisan Connect"
+                                style="@style/Widget.MaterialComponents.Chip.Choice"/>
+
+                        </com.google.android.material.chip.ChipGroup>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Discover the soul of Tamil Nadu, one story at a time. Explore, learn, and celebrate our rich cultural tapestry!"
+                            android:textSize="16sp"
+                            android:textColor="#37474F"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="sans-serif-light"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="TODO"
+        app:srcCompat="@android:drawable/ic_dialog_info"
+        app:layout_anchorGravity="bottom|end"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

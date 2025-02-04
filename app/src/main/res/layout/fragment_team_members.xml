@@ -40,6 +40,16 @@
             android:src="@drawable/sakthi" />
     </androidx.cardview.widget.CardView>
 
+    <!-- Popup Menu Button for First Member -->
+    <ImageView
+        android:id="@+id/member1PopupMenuButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_more_vert"
+        android:padding="8dp"
+        app:layout_constraintTop_toTopOf="@id/member1Card"
+        app:layout_constraintEnd_toEndOf="@id/member1Card"/>
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -101,6 +111,16 @@
             android:src="@drawable/yogee" />
     </androidx.cardview.widget.CardView>
 
+    <!-- Popup Menu Button for Second Member -->
+    <ImageView
+        android:id="@+id/member2PopupMenuButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_more_vert"
+        android:padding="8dp"
+        app:layout_constraintTop_toTopOf="@id/member2Card"
+        app:layout_constraintEnd_toEndOf="@id/member2Card"/>
+
     <!-- Third Member -->
     <androidx.cardview.widget.CardView
         android:id="@+id/member3Card"
@@ -120,6 +140,16 @@
             android:scaleType="centerCrop"
             android:src="@drawable/meena" />
     </androidx.cardview.widget.CardView>
+
+    <!-- Popup Menu Button for Third Member -->
+    <ImageView
+        android:id="@+id/member3PopupMenuButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_more_vert"
+        android:padding="8dp"
+        app:layout_constraintTop_toTopOf="@id/member3Card"
+        app:layout_constraintEnd_toEndOf="@id/member3Card"/>
 
     <LinearLayout
         android:layout_width="wrap_content"
