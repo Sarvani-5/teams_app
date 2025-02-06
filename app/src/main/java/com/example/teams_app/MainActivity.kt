@@ -4,32 +4,42 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
 import android.widget.ImageView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.fragment.app.Fragment
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var logoView: ImageView
+    private lateinit var notificationScheduler: NotificationScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-
         setContentView(R.layout.activity_main)
 
-        // Set up toolbar
+        // Setup toolbar
         setSupportActionBar(findViewById(R.id.toolbar))
-        supportActionBar?.title = "Tamil Roots"
-        supportActionBar?.subtitle = "Innovating for Tomorrow"
+        supportActionBar?.apply {
+            title = "Tamil Roots"
+            subtitle = "Innovating for Tomorrow"
+        }
 
-        // Initialize logo view
+        // Initialize logo
         logoView = findViewById(R.id.logoImage)
-
-        // Show only logo on startup
         if (savedInstanceState == null) {
-            logoView.setVisibility(View.VISIBLE)  // Show logo on main page
+            logoView.visibility = View.VISIBLE
+        }
+
+        // Initialize and schedule notifications
+        try {
+            notificationScheduler = NotificationScheduler(this)
+            notificationScheduler.scheduleTimetableNotifications()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to schedule notifications: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -41,19 +51,19 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val fragment: Fragment = when (item.itemId) {
             R.id.menu_about -> {
-                logoView.setVisibility(View.GONE)  // Hide logo when navigating to About Us
+                logoView.visibility = View.GONE
                 AboutUsFragment()
             }
             R.id.menu_team_details -> {
-                logoView.setVisibility(View.GONE)  // Hide logo when navigating to other fragments
+                logoView.visibility = View.GONE
                 TeamDetailsFragment()
             }
             R.id.menu_team_members -> {
-                logoView.setVisibility(View.GONE)
+                logoView.visibility = View.GONE
                 TeamMembersFragment()
             }
             R.id.menu_project -> {
-                logoView.setVisibility(View.GONE)
+                logoView.visibility = View.GONE
                 ProjectDescriptionFragment()
             }
             else -> return super.onOptionsItemSelected(item)
@@ -65,5 +75,32 @@ class MainActivity : AppCompatActivity() {
             .commit()
 
         return true
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            // If there are fragments in the back stack, show the logo
+            logoView.visibility = View.VISIBLE
+            supportFragmentManager.popBackStack()
+        } else {
+            // If we're at the root, show exit dialog
+            AlertDialog.Builder(this)
+                .setTitle("Exit App")
+                .setMessage("Are you sure you want to exit?")
+                .setPositiveButton("Yes") { _, _ ->
+                    finish()
+                }
+                .setNegativeButton("No") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .create()
+                .show()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clean up any resources if needed
     }
 }
