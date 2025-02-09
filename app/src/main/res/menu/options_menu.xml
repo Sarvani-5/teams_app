@@ -25,4 +25,10 @@
         android:icon="@drawable/ic_description"
         android:title="Project Description"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_birthdays"
+        android:icon="@drawable/ic_cake"
+        android:title="Set Birthdays"
+        app:showAsAction="never" />
 </menu>
