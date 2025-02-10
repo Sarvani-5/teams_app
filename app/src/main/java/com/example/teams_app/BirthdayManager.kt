@@ -17,8 +17,18 @@ class BirthdayManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("birthdays", Context.MODE_PRIVATE)
     private val channelId = "birthday_channel"
 
+    private val memberMapping = mapOf(
+        "Member1" to "Sakthi Sarvani R",
+        "Member2" to "Sowndarya Meenakshi A",
+        "Member3" to "Yogeetha K"
+    )
+
     init {
         createNotificationChannel()
+    }
+
+    private fun getMemberFullName(memberKey: String): String {
+        return memberMapping[memberKey] ?: memberKey
     }
 
     private fun createNotificationChannel() {
@@ -41,6 +51,7 @@ class BirthdayManager(private val context: Context) {
         prefs.edit().apply {
             putLong("${birthday.name}_date", birthday.date)
             putLong("${birthday.name}_time", birthday.time)
+            putString("${birthday.name}_fullname", getMemberFullName(birthday.name))
             apply()
         }
         scheduleBirthdayNotification(birthday)
@@ -54,7 +65,6 @@ class BirthdayManager(private val context: Context) {
     }
 
     fun reschedulePendingBirthdays() {
-        // Only reschedule if it's been more than a day since last reschedule
         val lastReschedule = prefs.getLong("last_reschedule", 0)
         val currentTime = System.currentTimeMillis()
 
@@ -70,7 +80,6 @@ class BirthdayManager(private val context: Context) {
                 }
             }
 
-            // Save last reschedule time
             prefs.edit().putLong("last_reschedule", currentTime).apply()
         }
     }
@@ -78,6 +87,7 @@ class BirthdayManager(private val context: Context) {
     private fun scheduleBirthdayNotification(birthday: Birthday) {
         val intent = Intent(context, BirthdayReceiver::class.java).apply {
             putExtra("name", birthday.name)
+            putExtra("fullname", getMemberFullName(birthday.name))
             action = "com.example.teams_app.BIRTHDAY_NOTIFICATION_${birthday.name}"
         }
 
@@ -89,8 +99,6 @@ class BirthdayManager(private val context: Context) {
         )
 
         val currentTime = System.currentTimeMillis()
-
-        // Calculate next birthday occurrence
         val calendar = Calendar.getInstance().apply {
             timeInMillis = birthday.date
             val timeCalendar = Calendar.getInstance().apply { timeInMillis = birthday.time }
@@ -98,7 +106,6 @@ class BirthdayManager(private val context: Context) {
             set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
             set(Calendar.SECOND, 0)
 
-            // If this year's birthday has passed, schedule for next year
             if (timeInMillis < currentTime) {
                 add(Calendar.YEAR, 1)
             }
@@ -122,6 +129,8 @@ class BirthdayManager(private val context: Context) {
     }
 
     fun showBirthdayNotification(name: String) {
+        val fullName = prefs.getString("${name}_fullname", getMemberFullName(name)) ?: name
+
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -135,8 +144,8 @@ class BirthdayManager(private val context: Context) {
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Happy Birthday! 🎉")
-            .setContentText("Today is $name's birthday! Don't forget to wish them!")
+            .setContentTitle("Happy Birthday! $fullName 🎉")
+            .setContentText("Wishing you a day filled with joy, laughter, and unforgettable moments!Celebrate big! 🎂🎈")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setAutoCancel(true)
