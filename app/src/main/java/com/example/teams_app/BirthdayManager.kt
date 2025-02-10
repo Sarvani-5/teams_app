@@ -54,20 +54,24 @@ class BirthdayManager(private val context: Context) {
     }
 
     fun reschedulePendingBirthdays() {
-        // Get all shared preferences entries
-        val allEntries = prefs.all
+        // Only reschedule if it's been more than a day since last reschedule
+        val lastReschedule = prefs.getLong("last_reschedule", 0)
+        val currentTime = System.currentTimeMillis()
 
-        // Group entries by name (removing _date and _time suffixes)
-        val birthdayNames = allEntries.keys
-            .filter { it.endsWith("_date") }
-            .map { it.removeSuffix("_date") }
-            .distinct()
+        if (currentTime - lastReschedule > 24 * 60 * 60 * 1000) {
+            val birthdayNames = prefs.all.keys
+                .filter { it.endsWith("_date") }
+                .map { it.removeSuffix("_date") }
+                .distinct()
 
-        // Reschedule each birthday
-        birthdayNames.forEach { name ->
-            getBirthday(name)?.let { birthday ->
-                scheduleBirthdayNotification(birthday)
+            birthdayNames.forEach { name ->
+                getBirthday(name)?.let { birthday ->
+                    scheduleBirthdayNotification(birthday)
+                }
             }
+
+            // Save last reschedule time
+            prefs.edit().putLong("last_reschedule", currentTime).apply()
         }
     }
 
@@ -86,16 +90,18 @@ class BirthdayManager(private val context: Context) {
 
         val currentTime = System.currentTimeMillis()
 
+        // Calculate next birthday occurrence
         val calendar = Calendar.getInstance().apply {
             timeInMillis = birthday.date
             val timeCalendar = Calendar.getInstance().apply { timeInMillis = birthday.time }
             set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
             set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
             set(Calendar.SECOND, 0)
-        }
 
-        if (calendar.timeInMillis < currentTime) {
-            calendar.timeInMillis = currentTime + 60000
+            // If this year's birthday has passed, schedule for next year
+            if (timeInMillis < currentTime) {
+                add(Calendar.YEAR, 1)
+            }
         }
 
         alarmManager.cancel(pendingIntent)
