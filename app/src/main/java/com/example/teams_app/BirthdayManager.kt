@@ -145,7 +145,7 @@ class BirthdayManager(private val context: Context) {
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Happy Birthday! $fullName 🎉")
-            .setContentText("Wishing you a day filled with joy, laughter, and unforgettable moments!Celebrate big! 🎂🎈")
+            .setContentText("Wishing you a day filled with joy, laughter, and unforgettable moments!🎂🎈")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setAutoCancel(true)

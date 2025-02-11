@@ -16,6 +16,27 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Teams_app">
 
+        <!-- Splash Activity as the only launcher -->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- MainActivity without launcher intent-filter -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <!-- Member Detail Activity -->
+        <activity
+            android:name=".MemberDetailActivity"
+            android:exported="false" />
+
+        <!-- Notification Receiver -->
         <receiver
             android:name=".NotificationReceiver"
             android:enabled="true"
@@ -24,6 +45,8 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Birthday Receiver -->
         <receiver
             android:name=".BirthdayReceiver"
             android:enabled="true"
@@ -32,17 +55,6 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name=".MemberDetailActivity" />
 
     </application>
-
 </manifest>

@@ -13,6 +13,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
+import android.Manifest
+import android.app.AlarmManager
+import android.content.Intent
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -42,16 +47,73 @@ class MainActivity : AppCompatActivity() {
         timeTableNotificationManager = TimeTableNotificationManager(this)
         birthdayManager = BirthdayManager(this)
 
-        // Schedule notifications
-        timeTableNotificationManager.scheduleNotifications()
-
-        // Request permissions for Android 13+
+        // Check and request permissions based on Android version
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestRequiredPermissions()
+        } else {
+            checkAndScheduleNotifications()
         }
+    }
 
-        // Show welcome toast
-        Toast.makeText(this, "Welcome! Class and birthday notifications are active", Toast.LENGTH_SHORT).show()
+    private fun checkAndScheduleNotifications() {
+        // Check if we have notification permission on Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                scheduleNotifications()
+            }
+        } else {
+            // For lower Android versions, just schedule
+            scheduleNotifications()
+        }
+    }
+
+    private fun scheduleNotifications() {
+        // Check for exact alarm permission on Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            if (alarmManager.canScheduleExactAlarms()) {
+                timeTableNotificationManager.scheduleNotifications()
+                birthdayManager.reschedulePendingBirthdays()
+                showWelcomeMessage()
+            } else {
+                // Show dialog to request exact alarm permission
+                showExactAlarmPermissionDialog()
+            }
+        } else {
+            // For lower Android versions, just schedule
+            timeTableNotificationManager.scheduleNotifications()
+            birthdayManager.reschedulePendingBirthdays()
+            showWelcomeMessage()
+        }
+    }
+
+    private fun showWelcomeMessage() {
+        Toast.makeText(
+            this,
+            "Welcome! Class and birthday notifications are active",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun showExactAlarmPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Permission Required")
+            .setMessage("This app needs permission to schedule exact alarms for class notifications. Please enable this in Settings.")
+            .setPositiveButton("Settings") { _, _ ->
+                // Open exact alarm settings
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+                }
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+                showWelcomeMessage()
+            }
+            .show()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -59,15 +121,19 @@ class MainActivity : AppCompatActivity() {
         val permissionsToRequest = mutableListOf<String>()
 
         // Check notification permission
-        if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(android.Manifest.permission.POST_NOTIFICATIONS)
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        // Check alarm permission
-        if (checkSelfPermission(android.Manifest.permission.SCHEDULE_EXACT_ALARM) !=
-            PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(android.Manifest.permission.SCHEDULE_EXACT_ALARM)
+        // Check exact alarm permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                // Show dialog for exact alarm permission
+                showExactAlarmPermissionDialog()
+            }
         }
 
         // Request permissions if needed
@@ -76,6 +142,9 @@ class MainActivity : AppCompatActivity() {
                 permissionsToRequest.toTypedArray(),
                 PERMISSION_REQUEST_CODE
             )
+        } else {
+            // All permissions are granted, proceed with scheduling
+            checkAndScheduleNotifications()
         }
     }
 
@@ -87,25 +156,34 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
             PERMISSION_REQUEST_CODE -> {
-                var allGranted = true
-                for (result in grantResults) {
-                    if (result != PackageManager.PERMISSION_GRANTED) {
-                        allGranted = false
-                        break
-                    }
-                }
-
-                if (allGranted) {
-                    Toast.makeText(this, "All permissions granted", Toast.LENGTH_SHORT).show()
-                    // Reschedule notifications since permissions are now granted
-                    birthdayManager.reschedulePendingBirthdays()
+                if (grantResults.isNotEmpty() &&
+                    grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    // All requested permissions granted
+                    checkAndScheduleNotifications()
                 } else {
-                    Toast.makeText(this,
-                        "Please enable all permissions in settings for full functionality",
-                        Toast.LENGTH_LONG).show()
+                    // Show settings dialog if permissions denied
+                    showPermissionSettingsDialog()
                 }
             }
         }
+    }
+
+    private fun showPermissionSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Permissions Required")
+            .setMessage("Please enable required permissions in Settings for the app to function properly.")
+            .setPositiveButton("Settings") { _, _ ->
+                // Open app settings
+                startActivity(Intent().apply {
+                    action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                    data = android.net.Uri.fromParts("package", packageName, null)
+                })
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+                showWelcomeMessage()
+            }
+            .show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -144,6 +222,20 @@ class MainActivity : AppCompatActivity() {
             .commit()
 
         return true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Check permissions again in case they were changed in Settings
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED &&
+                (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms())
+            ) {
+                checkAndScheduleNotifications()
+            }
+        }
     }
 
     override fun onBackPressed() {
