@@ -31,4 +31,9 @@
         android:icon="@drawable/ic_cake"
         android:title="Set Birthdays"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_location_tracking"
+        android:title="Track Location"
+        app:showAsAction="never" />
 </menu>
