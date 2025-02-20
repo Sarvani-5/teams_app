@@ -20,6 +20,7 @@ import android.provider.Settings
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import androidx.appcompat.widget.Toolbar
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,7 +44,8 @@ class MainActivity : AppCompatActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         // Setup toolbar
-        setSupportActionBar(findViewById(R.id.toolbar))
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
         supportActionBar?.apply {
             title = "Tamil Roots"
             subtitle = "Innovating for Tomorrow"
@@ -154,7 +156,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val fragment: Any = when (item.itemId) {
+        val fragment: Fragment = when (item.itemId) {
             R.id.menu_about -> {
                 logoView.visibility = View.GONE
                 AboutUsFragment()
@@ -183,7 +185,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment as Fragment)
+            .replace(R.id.fragment_container, fragment)
             .addToBackStack(null)
             .commit()
 
@@ -240,7 +242,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        super.onBackPressed()
         if (supportFragmentManager.backStackEntryCount > 0) {
             logoView.visibility = View.VISIBLE
             supportFragmentManager.popBackStack()
@@ -261,7 +262,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Cleanup if needed
+        // Any cleanup if needed
     }
 
     companion object {

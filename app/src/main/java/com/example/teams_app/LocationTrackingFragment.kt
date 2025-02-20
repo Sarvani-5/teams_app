@@ -1,56 +1,72 @@
 package com.example.teams_app
 
-import LocationData
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
+import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import android.widget.TextView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.example.teams_app.databinding.FragmentLocationTrackingBinding
 
 class LocationTrackingFragment : Fragment() {
+    private var _binding: FragmentLocationTrackingBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var geocoder: Geocoder
-    private lateinit var adapter: FriendLocationAdapter
-    private val locationsList = mutableListOf<LocationData>()
 
-    // View bindings
-    private lateinit var tvLatitude: TextView
-    private lateinit var tvLongitude: TextView
-    private lateinit var tvAddress: TextView
-    private lateinit var fabShareLocation: FloatingActionButton
-    private lateinit var rvFriendLocations: RecyclerView
+    private var currentLatitude: Double = 0.0
+    private var currentLongitude: Double = 0.0
 
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            locationResult.lastLocation?.let { location ->
-                updateLocationUI(location)
-                updateLocationsList(location)
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
+                // Precise location granted
+                startLocationUpdates()
+            }
+            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
+                // Approximate location granted
+                startLocationUpdates()
+            }
+            else -> {
+                // No location access granted
+                showLocationPermissionDeniedDialog()
             }
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        geocoder = Geocoder(requireContext(), Locale.getDefault())
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            locationResult.lastLocation?.let { location ->
+                currentLatitude = location.latitude
+                currentLongitude = location.longitude
+                updateLocationUI(location)
+            }
+        }
     }
 
     override fun onCreateView(
@@ -58,236 +74,193 @@ class LocationTrackingFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.fragment_location_tracking, container, false)
+        _binding = FragmentLocationTrackingBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initializeViews(view)
-        setupRecyclerView()
 
-        fabShareLocation.setOnClickListener {
-            shareCurrentLocation()
-        }
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+        geocoder = Geocoder(requireContext(), Locale.getDefault())
 
-        if (checkLocationPermissions()) {
-            startLocationUpdates()
-        } else {
-            requestLocationPermissions()
-        }
+        setupClickListeners()
     }
 
-    private fun initializeViews(view: View) {
-        tvLatitude = view.findViewById(R.id.tvLatitude)
-        tvLongitude = view.findViewById(R.id.tvLongitude)
-        tvAddress = view.findViewById(R.id.tvAddress)
-        fabShareLocation = view.findViewById(R.id.fabShareLocation)
-        rvFriendLocations = view.findViewById(R.id.rvFriendLocations)
-    }
-
-    private fun setupRecyclerView() {
-        adapter = FriendLocationAdapter(locationsList) { location ->
-            // Handle location click - e.g., show on map
-            Toast.makeText(
-                context,
-                "Selected location: ${location.name} at ${location.address}",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-        rvFriendLocations.layoutManager = LinearLayoutManager(context)
-        rvFriendLocations.adapter = adapter
-    }
-
-    private fun updateLocationsList(location: Location) {
-        try {
-            val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-            val address = addresses?.firstOrNull()?.getAddressLine(0) ?: "Unknown address"
-
-            val locationData = LocationData(
-                id = System.currentTimeMillis().toString(),
-                name = "Current Location",
-                latitude = location.latitude,
-                longitude = location.longitude,
-                address = address,
-                timestamp = System.currentTimeMillis()
-            )
-
-            locationsList.add(0, locationData) // Add to beginning of list
-            if (locationsList.size > 10) { // Keep only last 10 locations
-                locationsList.removeAt(locationsList.size - 1)
-            }
-            adapter.updateLocations(locationsList)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun startLocationUpdates() {
-        if (checkLocationPermissions()) {
-            try {
-                val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
-                    .setWaitForAccurateLocation(false)
-                    .setMinUpdateIntervalMillis(5000)
-                    .build()
-
-                fusedLocationClient.requestLocationUpdates(
-                    locationRequest,
-                    locationCallback,
-                    Looper.getMainLooper()
-                )
-            } catch (e: SecurityException) {
-                Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
+    private fun setupClickListeners() {
+        binding.btnLocateMe.setOnClickListener {
+            if (checkLocationPermissions()) {
+                startLocationUpdates()
+            } else {
+                requestLocationPermissions()
             }
         }
-    }
 
-    private fun updateLocationUI(location: Location) {
-        tvLatitude.text = "Latitude: ${location.latitude}"
-        tvLongitude.text = "Longitude: ${location.longitude}"
-
-        try {
-            val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-            addresses?.firstOrNull()?.let { address ->
-                val addressText = buildString {
-                    append("Address: ")
-                    append(address.getAddressLine(0))
-                    address.locality?.let { append("\nCity: $it") }
-                    address.adminArea?.let { append("\nState: $it") }
-                    address.countryName?.let { append("\nCountry: $it") }
-                }
-                tvAddress.text = addressText
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            tvAddress.text = "Address: Unable to fetch address"
-        }
-    }
-
-    private fun shareCurrentLocation() {
-        if (!checkLocationPermissions()) {
-            requestLocationPermissions()
-            return
+        binding.btnOpenMaps.setOnClickListener {
+            openInGoogleMaps()
         }
 
-        try {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location ->
-                    if (location == null) {
-                        Toast.makeText(context, "Unable to get current location", Toast.LENGTH_SHORT).show()
-                        return@addOnSuccessListener
-                    }
-
-                    try {
-                        val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                        val address = addresses?.firstOrNull()?.getAddressLine(0) ?: "Unknown address"
-
-                        val locationData = LocationData(
-                            id = System.currentTimeMillis().toString(),
-                            name = "Shared Location",
-                            latitude = location.latitude,
-                            longitude = location.longitude,
-                            address = address,
-                            timestamp = System.currentTimeMillis()
-                        )
-
-                        // Add to locations list
-                        locationsList.add(0, locationData)
-                        if (locationsList.size > 10) {
-                            locationsList.removeAt(locationsList.size - 1)
-                        }
-                        adapter.updateLocations(locationsList)
-
-                        val message = "Location shared successfully:\n" +
-                                "Latitude: ${location.latitude}\n" +
-                                "Longitude: ${location.longitude}\n" +
-                                "Address: $address"
-
-                        Toast.makeText(context, "Location shared!", Toast.LENGTH_SHORT).show()
-
-                        // Here you can add your server upload logic
-                        // uploadLocationToServer(locationData)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        Toast.makeText(
-                            context,
-                            "Error processing location: ${e.localizedMessage}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Toast.makeText(
-                        context,
-                        "Error getting location: ${e.localizedMessage}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-        } catch (e: SecurityException) {
-            Toast.makeText(
-                context,
-                "Location permission required",
-                Toast.LENGTH_SHORT
-            ).show()
-            requestLocationPermissions()
+        binding.btnOpenStreetView.setOnClickListener {
+            openInStreetView()
         }
     }
 
     private fun checkLocationPermissions(): Boolean {
-        return ContextCompat.checkSelfPermission(
+        return ActivityCompat.checkSelfPermission(
             requireContext(),
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(
+        ) == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(
                     requireContext(),
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestLocationPermissions() {
-        requestPermissions(
+        locationPermissionRequest.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
-            ),
-            LOCATION_PERMISSION_REQUEST_CODE
+            )
         )
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        when (requestCode) {
-            LOCATION_PERMISSION_REQUEST_CODE -> {
-                if (grantResults.isNotEmpty() &&
-                    grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-                ) {
-                    startLocationUpdates()
-                } else {
-                    Toast.makeText(
-                        context,
-                        "Location permissions are required for this feature",
-                        Toast.LENGTH_SHORT
-                    ).show()
+    private fun startLocationUpdates() {
+        try {
+            val locationRequest = LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                5000
+            ).build()
+
+            if (ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                binding.tvLocationStatus.text = "Getting location..."
+                fusedLocationClient.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
+            }
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Error getting location: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun updateLocationUI(location: Location) {
+        binding.tvLocationStatus.text = "Location found!"
+        binding.tvLatitude.text = "Latitude: ${location.latitude}"
+        binding.tvLongitude.text = "Longitude: ${location.longitude}"
+
+        // Get address asynchronously
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val addresses = geocoder.getFromLocation(
+                    location.latitude,
+                    location.longitude,
+                    1
+                )
+                withContext(Dispatchers.Main) {
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        binding.tvAddress.text = buildString {
+                            append("Address: ")
+                            append(address.getAddressLine(0))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    binding.tvAddress.text = "Address: Unable to fetch address"
                 }
             }
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        fusedLocationClient.removeLocationUpdates(locationCallback)
-    }
+    private fun openInGoogleMaps() {
+        try {
+            val uri = Uri.parse("geo:$currentLatitude,$currentLongitude?q=$currentLatitude,$currentLongitude")
+            val mapIntent = Intent(Intent.ACTION_VIEW, uri)
+            mapIntent.setPackage("com.google.android.apps.maps")
 
-    override fun onResume() {
-        super.onResume()
-        if (checkLocationPermissions()) {
-            startLocationUpdates()
+            if (mapIntent.resolveActivity(requireActivity().packageManager) != null) {
+                startActivity(mapIntent)
+            } else {
+                // If Google Maps app is not installed, open in browser
+                val browserUri = Uri.parse(
+                    "https://www.google.com/maps?q=$currentLatitude,$currentLongitude"
+                )
+                val browserIntent = Intent(Intent.ACTION_VIEW, browserUri)
+                startActivity(browserIntent)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Error opening maps: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
-    companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
+    private fun openInStreetView() {
+        try {
+            val uri = Uri.parse(
+                "google.streetview:cbll=$currentLatitude,$currentLongitude"
+            )
+            val streetViewIntent = Intent(Intent.ACTION_VIEW, uri)
+            streetViewIntent.setPackage("com.google.android.apps.maps")
+
+            if (streetViewIntent.resolveActivity(requireActivity().packageManager) != null) {
+                startActivity(streetViewIntent)
+            } else {
+                // If Google Maps app is not installed, open in browser
+                val browserUri = Uri.parse(
+                    "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=$currentLatitude,$currentLongitude"
+                )
+                val browserIntent = Intent(Intent.ACTION_VIEW, browserUri)
+                startActivity(browserIntent)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Error opening Street View: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun showLocationPermissionDeniedDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Location Permission Required")
+            .setMessage("This feature requires location permission to work. Please grant location permission in settings.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                // Open app settings
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                val uri = Uri.fromParts("package", requireActivity().packageName, null)
+                intent.data = uri
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    override fun onPause() {
+        super.onPause()
+        fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 }
