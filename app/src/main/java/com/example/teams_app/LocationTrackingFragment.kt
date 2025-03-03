@@ -37,8 +37,13 @@ class LocationTrackingFragment : Fragment() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var geocoder: Geocoder
 
+    // These variables store the most recently obtained coordinates
+    // whether from GPS or manual entry
     private var currentLatitude: Double = 0.0
     private var currentLongitude: Double = 0.0
+
+    // Track the source of coordinates to help with UI updates
+    private var lastCoordinateSource = "none" // "gps" or "manual"
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -62,9 +67,13 @@ class LocationTrackingFragment : Fragment() {
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             locationResult.lastLocation?.let { location ->
+                // Update the shared coordinates
                 currentLatitude = location.latitude
                 currentLongitude = location.longitude
-                updateLocationUI(location)
+                lastCoordinateSource = "gps"
+
+                // Update only the top UI section
+                updateCurrentLocationUI(location)
             }
         }
     }
@@ -97,11 +106,58 @@ class LocationTrackingFragment : Fragment() {
         }
 
         binding.btnOpenMaps.setOnClickListener {
+            // This will open maps with the most recently obtained coordinates,
+            // regardless of whether they came from GPS or manual entry
             openInGoogleMaps()
         }
 
-        binding.btnOpenStreetView.setOnClickListener {
-            openInStreetView()
+        binding.btnSubmitCoordinates.setOnClickListener {
+            try {
+                val lat = binding.etLatitude.text.toString().toDoubleOrNull()
+                val lng = binding.etLongitude.text.toString().toDoubleOrNull()
+
+                if (lat != null && lng != null) {
+                    // Update the shared coordinates
+                    currentLatitude = lat
+                    currentLongitude = lng
+                    lastCoordinateSource = "manual"
+
+                    // Only update the address in the input card
+                    getManualAddressFromCoordinates(lat, lng)
+                } else {
+                    Toast.makeText(context, "Please enter valid coordinates", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun getManualAddressFromCoordinates(latitude: Double, longitude: Double) {
+        // Only update the card UI section
+        binding.tvInputAddress.text = "Searching for address..."
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val addresses = geocoder.getFromLocation(
+                    latitude,
+                    longitude,
+                    1
+                )
+                withContext(Dispatchers.Main) {
+                    if (!addresses.isNullOrEmpty()) {
+                        val address = addresses[0]
+                        val addressText = address.getAddressLine(0) ?: "No address line available"
+                        binding.tvInputAddress.text = addressText
+                    } else {
+                        binding.tvInputAddress.text = "No address found for these coordinates"
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    binding.tvInputAddress.text = "Error: Unable to fetch address"
+                }
+            }
         }
     }
 
@@ -157,12 +213,13 @@ class LocationTrackingFragment : Fragment() {
         }
     }
 
-    private fun updateLocationUI(location: Location) {
+    private fun updateCurrentLocationUI(location: Location) {
+        // Only update the top UI section
         binding.tvLocationStatus.text = "Location found!"
         binding.tvLatitude.text = "Latitude: ${location.latitude}"
         binding.tvLongitude.text = "Longitude: ${location.longitude}"
 
-        // Get address asynchronously
+        // Get address asynchronously only for the top UI
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val addresses = geocoder.getFromLocation(
@@ -173,10 +230,10 @@ class LocationTrackingFragment : Fragment() {
                 withContext(Dispatchers.Main) {
                     if (!addresses.isNullOrEmpty()) {
                         val address = addresses[0]
-                        binding.tvAddress.text = buildString {
-                            append("Address: ")
-                            append(address.getAddressLine(0))
-                        }
+                        val addressText = address.getAddressLine(0) ?: "No address line available"
+                        binding.tvAddress.text = "Address: $addressText"
+                    } else {
+                        binding.tvAddress.text = "Address: No address found"
                     }
                 }
             } catch (e: Exception) {
@@ -189,6 +246,8 @@ class LocationTrackingFragment : Fragment() {
 
     private fun openInGoogleMaps() {
         try {
+            // This will use the most recently obtained coordinates,
+            // regardless of whether they came from GPS or manual entry
             val uri = Uri.parse("geo:$currentLatitude,$currentLongitude?q=$currentLatitude,$currentLongitude")
             val mapIntent = Intent(Intent.ACTION_VIEW, uri)
             mapIntent.setPackage("com.google.android.apps.maps")
@@ -207,33 +266,6 @@ class LocationTrackingFragment : Fragment() {
             Toast.makeText(
                 context,
                 "Error opening maps: ${e.message}",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    private fun openInStreetView() {
-        try {
-            val uri = Uri.parse(
-                "google.streetview:cbll=$currentLatitude,$currentLongitude"
-            )
-            val streetViewIntent = Intent(Intent.ACTION_VIEW, uri)
-            streetViewIntent.setPackage("com.google.android.apps.maps")
-
-            if (streetViewIntent.resolveActivity(requireActivity().packageManager) != null) {
-                startActivity(streetViewIntent)
-            } else {
-                // If Google Maps app is not installed, open in browser
-                val browserUri = Uri.parse(
-                    "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=$currentLatitude,$currentLongitude"
-                )
-                val browserIntent = Intent(Intent.ACTION_VIEW, browserUri)
-                startActivity(browserIntent)
-            }
-        } catch (e: Exception) {
-            Toast.makeText(
-                context,
-                "Error opening Street View: ${e.message}",
                 Toast.LENGTH_SHORT
             ).show()
         }
