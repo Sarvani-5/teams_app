@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "179626382475",
+    "project_id": "tamilroots-connect-47b80",
+    "storage_bucket": "tamilroots-connect-47b80.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179626382475:android:0ed67f21b09c6396cb308e",
+        "android_client_info": {
+          "package_name": "com.example.teams_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrEaW6wfCVfxDUWXIagVRiyCuRGtY5a_4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

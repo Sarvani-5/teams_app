@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         setContentView(R.layout.activity_main)
 
+
         // Initialize location services
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
