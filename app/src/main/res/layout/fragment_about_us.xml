@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        app:elevation="4dp">
+
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tamil Roots"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="#2C3E50"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="sans-serif-medium"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Unveiling Tamil Nadu's Timeless Heritage"
+                        android:textSize="18sp"
+                        android:textStyle="italic"
+                        android:textColor="#34495E"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"
+                        android:fontFamily="sans-serif-light"/>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#E0E0E0"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tamil Roots is your gateway to the rich and diverse heritage of Tamil Nadu. From the majestic temples of Thanjavur to the intricate craftsmanship of Kanchipuram silk, our app lets you explore the cultural essence of each city.
+
+Immerse yourself in the world of indigenous arts, traditional crafts, and hidden historical gems. Discover iconic heritage products like Madurai's fragrant jasmine, Chettinad's handcrafted tiles, and the world-famous bronze idols of Swamimalai.
+
+Connect with artisans, learn the stories behind Tamil Nadu's timeless traditions, and embark on a journey through centuries of artistry and culture.
+
+Experience the soul of Tamil Nadu with Tamil Roots!"
+                        android:textSize="16sp"
+                        android:textColor="#2C3E50"
+                        android:lineSpacingExtra="6dp"
+                        android:fontFamily="sans-serif-light"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F0F4F8">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        app:elevation="6dp">
+
+
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="8dp"
+                android:layout_marginBottom="16dp"
+                android:animateLayoutChanges="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Meet the Visionaries"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="#1A237E"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="sans-serif-black"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Innovation, Passion, and Expertise Converge"
+                        android:textSize="18sp"
+                        android:textStyle="italic"
+                        android:textColor="#37474F"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"
+                        android:fontFamily="sans-serif-light"/>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:background="#E0E0E0"
+                        android:layout_marginBottom="16dp"/>
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:adjustViewBounds="true"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/team_photo"
+                        android:contentDescription="Our Team"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Our team is a dynamic blend of passionate individuals, each bringing their unique expertise to the table. United by a shared goal, we aim to bridge the gap between technology and culture, allowing people to reconnect with Tamil Nadu's vibrant heritage. With a deep appreciation for the state's rich traditions, we are committed to using cutting-edge technology to create an immersive experience that brings the past to life for future generations. Together, we are not just building an app; we are building a platform that celebrates the soul of Tamil Nadu and its timeless stories."
+                        android:textSize="16sp"
+                        android:textColor="#37474F"
+                        android:lineSpacingExtra="4dp"
+                        android:gravity="center"
+                        android:fontFamily="sans-serif-light"/>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_about"
+        android:icon="@drawable/ic_info"
+        android:title="About Us"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_team_details"
+        android:icon="@drawable/ic_group"
+        android:title="Team Details"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_team_members"
+        android:icon="@drawable/ic_person"
+        android:title="Team Members"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_project"
+        android:icon="@drawable/ic_description"
+        android:title="Project Description"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_birthdays"
+        android:icon="@drawable/ic_cake"
+        android:title="Set Birthdays"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_location_tracking"
+        android:title="Track Location"
+        app:showAsAction="never" />
+</menu>
