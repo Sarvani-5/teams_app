@@ -6,4 +6,7 @@
     <item
         android:id="@+id/context_call"
         android:title="Call" />
+    <item
+        android:id="@+id/context_send_sms"
+        android:title="Send Alert SMS" />
 </menu>

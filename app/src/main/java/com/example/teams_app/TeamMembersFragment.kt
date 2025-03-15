@@ -1,8 +1,13 @@
 package com.example.teams_app
 
+import android.content.Context
+import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.telephony.SmsManager
 import android.view.ContextMenu
 import android.view.LayoutInflater
 import android.view.MenuItem
@@ -15,6 +20,9 @@ import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import com.google.firebase.firestore.FirebaseFirestore
 import android.util.Log
+import android.widget.EditText
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class TeamMembersFragment : Fragment() {
     // Data class to store member information
@@ -285,21 +293,6 @@ class TeamMembersFragment : Fragment() {
         requireActivity().menuInflater.inflate(R.menu.team_member_context_menu, menu)
     }
 
-    override fun onContextItemSelected(item: MenuItem): Boolean {
-        val member = currentSelectedMember ?: return false
-
-        return when (item.itemId) {
-            R.id.context_send_email -> {
-                sendEmail(member.email)
-                true
-            }
-            R.id.context_call -> {
-                makePhoneCall(member.phone)
-                true
-            }
-            else -> super.onContextItemSelected(item)
-        }
-    }
 
     private fun showContactOptions(member: MemberInfo) {
         val options = arrayOf("Send Email", "Make Phone Call")
@@ -336,7 +329,129 @@ class TeamMembersFragment : Fragment() {
             Toast.makeText(requireContext(), "No phone app found", Toast.LENGTH_SHORT).show()
         }
     }
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        val member = currentSelectedMember ?: return false
 
+        return when (item.itemId) {
+            R.id.context_send_email -> {
+                sendEmail(member.email)
+                true
+            }
+            R.id.context_call -> {
+                makePhoneCall(member.phone)
+                true
+            }
+            R.id.context_send_sms -> {
+                sendSmsAlert(member)
+                true
+            }
+            else -> super.onContextItemSelected(item)
+        }
+    }
+
+    private fun sendSmsAlert(member: MemberInfo) {
+        // Get current mindset of the member
+        val currentMindset = MemberDetailActivity.getMemberMindset(requireContext(), member.name)
+
+        // Create a dialog to compose the SMS
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_send_alert, null)
+
+        val messageEditText = dialogView.findViewById<EditText>(R.id.alertMessageEditText)
+
+        // Pre-fill message with member's name and current mindset
+        val defaultMessage = "Hey ${member.name}, How are you doing?"
+        messageEditText.setText(defaultMessage)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Send Alert to ${member.name}")
+            .setView(dialogView)
+            .setPositiveButton("Send") { _, _ ->
+                val message = messageEditText.text.toString().trim()
+
+                if (message.isNotEmpty() && member.phone.isNotEmpty()) {
+                    // Check for SMS permission
+                    if (ContextCompat.checkSelfPermission(
+                            requireContext(),
+                            Manifest.permission.SEND_SMS
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        // Store the message and member info for after permission is granted
+                        pendingSmsMessage = message
+                        pendingSmsMember = member
+
+                        // Request permission
+                        ActivityCompat.requestPermissions(
+                            requireActivity(),
+                            arrayOf(Manifest.permission.SEND_SMS),
+                            SMS_PERMISSION_REQUEST_CODE
+                        )
+                    } else {
+                        // Permission already granted, send SMS
+                        sendSms(member.phone, message, member.name)
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Message cannot be empty", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+            .show()
+    }
+
+    private fun sendSms(phoneNumber: String, message: String, memberName: String) {
+        try {
+            val smsManager = SmsManager.getDefault()
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+            Toast.makeText(requireContext(), "Alert sent to $memberName", Toast.LENGTH_SHORT).show()
+
+            // Log the alert in SharedPreferences
+            logAlertSent(memberName, phoneNumber, message)
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Failed to send alert: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun logAlertSent(memberName: String, phoneNumber: String, message: String) {
+        val alertsPrefs = requireContext().getSharedPreferences("AlertsLog", Context.MODE_PRIVATE)
+        val timestamp = System.currentTimeMillis()
+        val editor = alertsPrefs.edit()
+
+        // Store the alert details
+        editor.putString("alert_$timestamp", "$memberName|$phoneNumber|$message")
+        editor.apply()
+    }
+
+    // Variables to store pending SMS info for after permission is granted
+    private var pendingSmsMessage: String? = null
+    private var pendingSmsMember: MemberInfo? = null
+    private val SMS_PERMISSION_REQUEST_CODE = 101
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == SMS_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, send the pending SMS
+                pendingSmsMember?.let { member ->
+                    pendingSmsMessage?.let { message ->
+                        sendSms(member.phone, message, member.name)
+
+                        // Clear pending data
+                        pendingSmsMessage = null
+                        pendingSmsMember = null
+                    }
+                }
+            } else {
+                // Permission denied
+                Toast.makeText(requireContext(), "SMS permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     private fun navigateToMemberDetail(member: MemberInfo) {
         val intent = Intent(activity, MemberDetailActivity::class.java).apply {
             putExtra("MEMBER_NAME", member.name)
