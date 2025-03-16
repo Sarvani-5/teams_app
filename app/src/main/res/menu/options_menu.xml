@@ -36,4 +36,9 @@
         android:id="@+id/menu_location_tracking"
         android:title="Track Location"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_system_status"
+        android:title="System Status"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
 </menu>

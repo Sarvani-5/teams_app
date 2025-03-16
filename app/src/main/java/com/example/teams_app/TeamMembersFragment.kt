@@ -21,6 +21,7 @@ import androidx.fragment.app.Fragment
 import com.google.firebase.firestore.FirebaseFirestore
 import android.util.Log
 import android.widget.EditText
+import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -345,8 +346,54 @@ class TeamMembersFragment : Fragment() {
                 sendSmsAlert(member)
                 true
             }
+            R.id.context_send_whatsapp -> {
+                sendWhatsAppMessage(member)
+                true
+            }
             else -> super.onContextItemSelected(item)
         }
+    }
+
+    private fun sendWhatsAppMessage(member: MemberInfo) {
+        // Create a dialog to compose the WhatsApp message
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_send_alert, null)
+
+        val messageEditText = dialogView.findViewById<EditText>(R.id.alertMessageEditText)
+        val msg = dialogView.findViewById<TextView>(R.id.alert)
+        msg.text = "This message will be sent via Whatsapp"
+
+        val messageTypeText = dialogView.findViewWithTag<TextView>("messageTypeText")
+            ?: dialogView.findViewById<TextView>(android.R.id.text2)  // Fallback if tag not found
+
+        // Update the info text to indicate WhatsApp
+        messageTypeText?.text = "This message will be sent via WhatsApp"
+
+        // Pre-fill message with member's name
+        val defaultMessage = "Hey ${member.name}, How are you doing?"
+        messageEditText.setText(defaultMessage)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Message to ${member.name}")
+            .setView(dialogView)
+            .setPositiveButton("Send") { _, _ ->
+                val message = messageEditText.text.toString().trim()
+
+                if (message.isNotEmpty() && member.phone.isNotEmpty()) {
+                    // Send WhatsApp message
+                    val success = WhatsAppHelper.sendWhatsAppMessage(requireContext(), member.phone, message)
+
+                    if (success) {
+                        // Log the WhatsApp message
+                        WhatsAppHelper.logWhatsAppMessageSent(requireContext(), member.name, member.phone, message)
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Message cannot be empty", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+            .show()
     }
 
     private fun sendSmsAlert(member: MemberInfo) {

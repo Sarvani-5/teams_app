@@ -28,11 +28,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var timeTableNotificationManager: TimeTableNotificationManager
     private lateinit var birthdayManager: BirthdayManager
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    // Add reference to the ReceiverManager
+    private val receiverManager = ReceiverManager
 
     private val requiredPermissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.POST_NOTIFICATIONS
+        Manifest.permission.POST_NOTIFICATIONS,
+        // Add SMS permission for the team members alerts
+        Manifest.permission.SEND_SMS
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,12 +64,18 @@ class MainActivity : AppCompatActivity() {
             logoView.visibility = View.VISIBLE
         }
 
+        // Create notification channel for the system alerts
+        NotificationHelper.createNotificationChannel(this)
+
         // Check permissions based on Android version
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestRequiredPermissions()
         } else {
             checkAndScheduleNotifications()
         }
+
+        // Register broadcast receivers for network and battery monitoring
+        receiverManager.registerReceivers(applicationContext)
     }
 
     private fun checkAndScheduleNotifications() {
@@ -102,7 +112,7 @@ class MainActivity : AppCompatActivity() {
     private fun showWelcomeMessage() {
         Toast.makeText(
             this,
-            "Welcome! Class and birthday notifications are active",
+            "Welcome! Class, system, and birthday notifications are active",
             Toast.LENGTH_SHORT
         ).show()
     }
@@ -181,6 +191,11 @@ class MainActivity : AppCompatActivity() {
                 logoView.visibility = View.GONE
                 LocationTrackingFragment()
             }
+            // Add a new option to view system status logs
+            R.id.menu_system_status -> {
+                logoView.visibility = View.GONE
+                SystemStatusFragment()
+            }
             else -> return super.onOptionsItemSelected(item)
         }
 
@@ -239,6 +254,9 @@ class MainActivity : AppCompatActivity() {
                 checkAndScheduleNotifications()
             }
         }
+
+        // Re-register receivers in case they were unregistered
+        receiverManager.registerReceivers(applicationContext)
     }
 
     override fun onBackPressed() {
@@ -262,7 +280,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Any cleanup if needed
+        // Unregister the broadcast receivers to prevent memory leaks
+        receiverManager.unregisterReceivers(applicationContext)
     }
 
     companion object {

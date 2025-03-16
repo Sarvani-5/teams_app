@@ -3,7 +3,9 @@
     <color name="colorPrimary">#2E1437</color>
     <color name="colorPrimaryDark">#1E0D24</color>
     <color name="colorAccent">#9C27B0</color>
-
+    <color name="airplane_mode_bg">#FFF8E1</color> <!-- Light yellow -->
+    <color name="battery_level_bg">#E8F5E9</color> <!-- Light green -->
+    <color name="default_status_bg">#FFFFFF</color> <!-- White -->
     <!-- Additional colors for your app -->
     <color name="textColorPrimary">#212121</color>
     <color name="textColorSecondary">#757575</color>
