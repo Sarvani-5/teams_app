@@ -1,8 +1,12 @@
 package com.example.teams_app
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.animation.AlphaAnimation
@@ -11,6 +15,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -18,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.tabs.TabLayout
+import java.io.File
 
 class MemberDetailActivity : AppCompatActivity() {
 
@@ -30,26 +36,40 @@ class MemberDetailActivity : AppCompatActivity() {
     private lateinit var favoritesContainer: LinearLayout
     private lateinit var addFavoriteButton: Button
 
+    private lateinit var playlistManager: PlaylistManager
+    private lateinit var playlistStatusText: TextView
+    private lateinit var playlistControlButton: Button
+    private lateinit var playlistSeekBar: SeekBar
+    private lateinit var playlistProgressText: TextView
+
     private lateinit var dbHelper: FavoritesDbHelper
-    private var currentTab = "songs" // Default tab
+    private var currentTab = "songs"
 
     private val PREFS_NAME = "MindsetPrefs"
     private val MINDSET_PREFIX = "MemberMindset_"
 
-    // Define available mindset options
     private val mindsetOptions = listOf("Happy", "Excited", "Calm", "Focused", "Tired", "Anxious", "Sad", "Lonely")
-    private var currentMindset: String = "Happy" // Default value
+    private var currentMindset: String = "Happy"
     private var selectedMindset: String? = null
     private var memberName: String = ""
+    private var selectedAudioPath: String? = null
+
+    companion object {
+        private const val AUDIO_PICK_REQUEST_CODE = 1001
+
+        fun getMemberMindset(context: Context, memberName: String): String {
+            val prefs = context.getSharedPreferences("MindsetPrefs", Context.MODE_PRIVATE)
+            val sanitizedName = memberName.replace("[^a-zA-Z0-9]".toRegex(), "_")
+            val key = "MemberMindset_" + sanitizedName
+            return prefs.getString(key, "Happy") ?: "Happy"
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_member_detail)
 
-        // Initialize SQLite database helper
         dbHelper = FavoritesDbHelper(this)
-
-        // Initialize SharedPreferences
         sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         // Initialize views
@@ -61,7 +81,13 @@ class MemberDetailActivity : AppCompatActivity() {
         favoritesContainer = findViewById(R.id.favoritesContainer)
         addFavoriteButton = findViewById(R.id.addFavoriteButton)
 
-        // Get data from intent
+        // Initialize playlist views
+        playlistStatusText = findViewById(R.id.playlistStatusText)
+        playlistControlButton = findViewById(R.id.playlistControlButton)
+        playlistSeekBar = findViewById(R.id.playlistSeekBar)
+        playlistProgressText = findViewById(R.id.playlistProgressText)
+
+        // Extract member details from intent
         memberName = intent.getStringExtra("MEMBER_NAME") ?: ""
         val role = intent.getStringExtra("MEMBER_ROLE") ?: ""
         val email = intent.getStringExtra("MEMBER_EMAIL") ?: ""
@@ -69,7 +95,7 @@ class MemberDetailActivity : AppCompatActivity() {
         val description = intent.getStringExtra("MEMBER_DESCRIPTION") ?: ""
         val imageResId = intent.getIntExtra("MEMBER_IMAGE", 0)
 
-        // Set up views
+        // Set member details in views
         findViewById<TextView>(R.id.toolbarTitle).text = memberName
         findViewById<TextView>(R.id.memberName).text = memberName
         findViewById<TextView>(R.id.memberRole).text = role
@@ -78,13 +104,11 @@ class MemberDetailActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.memberPhone).text = phone
         findViewById<ImageView>(R.id.memberImage).setImageResource(imageResId)
 
-        // Load and display the current mindset for this specific member
+        // Load and setup mindset
         loadCurrentMindset()
-
-        // Set up mindset selection chips
         setupMindsetChips()
 
-        // Set up the "Set Mindset" button
+        // Mindset set button listener
         setMindsetButton.setOnClickListener {
             if (selectedMindset != null) {
                 saveMindset(selectedMindset!!)
@@ -94,13 +118,22 @@ class MemberDetailActivity : AppCompatActivity() {
             }
         }
 
-        // Set up favorites tab layout
+        // Setup favorites tab layout
         setupFavoritesTabLayout()
 
-        // Set up add favorite button
+        // Add favorite button listener
         addFavoriteButton.setOnClickListener {
             showAddFavoriteDialog()
         }
+
+        // Setup playlist manager
+        playlistManager = PlaylistManager(this, memberName)
+        playlistManager.setupPlaylistControls(
+            playlistStatusText,
+            playlistControlButton,
+            playlistSeekBar,
+            playlistProgressText
+        )
 
         // Load initial favorites
         loadFavorites(currentTab)
@@ -121,10 +154,8 @@ class MemberDetailActivity : AppCompatActivity() {
     }
 
     private fun loadFavorites(type: String) {
-        // Clear existing items
         favoritesContainer.removeAllViews()
 
-        // Get favorites from database
         val favorites = dbHelper.getFavorites(memberName, type)
 
         if (favorites.isEmpty()) {
@@ -155,12 +186,26 @@ class MemberDetailActivity : AppCompatActivity() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_favorite, null)
         val nameEditText = dialogView.findViewById<EditText>(R.id.favoriteNameEditText)
         val extraEditText = dialogView.findViewById<EditText>(R.id.favoriteExtraEditText)
+        val uploadButton = dialogView.findViewById<Button>(R.id.uploadAudioButton)
         val extraLabel = dialogView.findViewById<TextView>(R.id.extraLabel)
 
-        // Set appropriate labels based on current tab
+        // Reset selected audio path
+        selectedAudioPath = null
+
         val itemType = if (currentTab == "songs") "Song" else "Movie"
         val extraType = if (currentTab == "songs") "Genre" else "Language"
         extraLabel.text = extraType
+
+        uploadButton.setOnClickListener {
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "audio/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+            }
+            startActivityForResult(
+                Intent.createChooser(intent, "Select Audio File"),
+                AUDIO_PICK_REQUEST_CODE
+            )
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Add Favorite $itemType")
@@ -170,7 +215,14 @@ class MemberDetailActivity : AppCompatActivity() {
                 val extra = extraEditText.text.toString().trim()
 
                 if (name.isNotEmpty()) {
-                    val id = dbHelper.addFavorite(memberName, currentTab, name, extra)
+                    val id = dbHelper.addFavorite(
+                        memberName,
+                        currentTab,
+                        name,
+                        extra,
+                        selectedAudioPath
+                    )
+
                     if (id > 0) {
                         loadFavorites(currentTab)
                         Toast.makeText(this, "Favorite $itemType added", Toast.LENGTH_SHORT).show()
@@ -185,6 +237,51 @@ class MemberDetailActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == AUDIO_PICK_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { uri ->
+                // Save the audio file to app's internal storage
+                selectedAudioPath = saveAudioFile(uri)
+                Toast.makeText(this, "Audio file selected", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun saveAudioFile(uri: Uri): String {
+        val inputStream = contentResolver.openInputStream(uri)
+        val fileName = getFileName(uri)
+        val audioFile = File(filesDir, fileName)
+
+        inputStream?.use { input ->
+            audioFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        return audioFile.absolutePath
+    }
+
+    private fun getFileName(uri: Uri): String {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    result = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1) {
+                result = result?.substring(cut!! + 1)
+            }
+        }
+        return result ?: "audio_${System.currentTimeMillis()}.mp3"
+    }
+
     private fun deleteFavorite(id: Int) {
         val success = dbHelper.deleteFavorite(id)
         if (success) {
@@ -194,33 +291,25 @@ class MemberDetailActivity : AppCompatActivity() {
     }
 
     private fun getMindsetKeyForMember(memberName: String): String {
-        // Create a unique key for each member by combining the prefix and the member's name
-        // We sanitize the name to make it safe for use as a preference key
         val sanitizedName = memberName.replace("[^a-zA-Z0-9]".toRegex(), "_")
         return MINDSET_PREFIX + sanitizedName
     }
 
     private fun loadCurrentMindset() {
-        // Get the mindset key for this specific member
         val mindsetKey = getMindsetKeyForMember(memberName)
-
-        // Retrieve the last saved mindset for this member from SharedPreferences
         currentMindset = sharedPreferences.getString(mindsetKey, "Happy") ?: "Happy"
         currentMindsetText.text = currentMindset
     }
 
     private fun setupMindsetChips() {
-        // Clear any existing chips
         chipGroup.removeAllViews()
 
-        // Create chips for each mindset option
         mindsetOptions.forEach { mindset ->
             val chip = Chip(this)
             chip.text = mindset
             chip.isCheckable = true
-            chip.isChecked = mindset == currentMindset // Check the current mindset
+            chip.isChecked = mindset == currentMindset
 
-            // Set click listener for the chip
             chip.setOnClickListener {
                 selectedMindset = mindset
                 updateSelectedChip(chipGroup, chip)
@@ -231,7 +320,6 @@ class MemberDetailActivity : AppCompatActivity() {
     }
 
     private fun updateSelectedChip(chipGroup: ChipGroup, selectedChip: Chip) {
-        // Uncheck all chips
         for (i in 0 until chipGroup.childCount) {
             val chip = chipGroup.getChildAt(i) as? Chip
             chip?.isChecked = chip == selectedChip
@@ -239,14 +327,9 @@ class MemberDetailActivity : AppCompatActivity() {
     }
 
     private fun saveMindset(mindset: String) {
-        // Get the mindset key for this specific member
         val mindsetKey = getMindsetKeyForMember(memberName)
-
-        // Save the selected mindset to SharedPreferences for this specific member
         currentMindset = mindset
         sharedPreferences.edit().putString(mindsetKey, mindset).apply()
-
-        // Update the display
         currentMindsetText.text = mindset
     }
 
@@ -259,16 +342,14 @@ class MemberDetailActivity : AppCompatActivity() {
             )
         )
 
-        // Make sure the text is visible
         mindsetConfirmationText.visibility = View.VISIBLE
 
-        // Add a fade animation
         val fadeIn = AlphaAnimation(0.0f, 1.0f)
         fadeIn.duration = 500
 
         val fadeOut = AlphaAnimation(1.0f, 0.0f)
         fadeOut.duration = 500
-        fadeOut.startOffset = 2000 // Start fading out after 2 seconds
+        fadeOut.startOffset = 2000
 
         fadeIn.setAnimationListener(object : Animation.AnimationListener {
             override fun onAnimationStart(animation: Animation) {}
@@ -289,13 +370,8 @@ class MemberDetailActivity : AppCompatActivity() {
         mindsetConfirmationText.startAnimation(fadeIn)
     }
 
-    // Method to get a member's mindset (can be used from other parts of the app)
-    companion object {
-        fun getMemberMindset(context: Context, memberName: String): String {
-            val prefs = context.getSharedPreferences("MindsetPrefs", Context.MODE_PRIVATE)
-            val sanitizedName = memberName.replace("[^a-zA-Z0-9]".toRegex(), "_")
-            val key = "MemberMindset_" + sanitizedName
-            return prefs.getString(key, "Happy") ?: "Happy"
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        playlistManager.release()
     }
 }

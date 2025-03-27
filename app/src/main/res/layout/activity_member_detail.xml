@@ -196,15 +196,15 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- New Favorites Card -->
+        <!-- Favorites Card -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/favoritesCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="4dp"
-            app:layout_constraintTop_toBottomOf="@id/mindsetCard"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintTop_toBottomOf="@id/mindsetCard">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -246,6 +246,66 @@
                     android:textAllCaps="false"
                     android:backgroundTint="#2e1437"
                     android:padding="12dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Playlist Card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/playlistCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:layout_constraintTop_toBottomOf="@id/favoritesCard"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Playlist Controls"
+                    android:textColor="#212529"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:id="@+id/playlistStatusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAlignment="center"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="8dp"
+                    android:text="No playlist selected"/>
+
+                <Button
+                    android:id="@+id/playlistControlButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Play/Pause"
+                    android:textAllCaps="false"
+                    android:backgroundTint="#2e1437"/>
+
+                <SeekBar
+                    android:id="@+id/playlistSeekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"/>
+
+                <TextView
+                    android:id="@+id/playlistProgressText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAlignment="center"
+                    android:textSize="14sp"
+                    android:layout_marginTop="8dp"
+                    android:text="0:00 / 0:00"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
     </androidx.constraintlayout.widget.ConstraintLayout>

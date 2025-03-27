@@ -1,42 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/extraLabel"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Name"
-        android:textSize="14sp"
         android:textStyle="bold"
-        android:layout_marginBottom="4dp" />
+        android:text="Genre" />
 
     <EditText
         android:id="@+id/favoriteNameEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter name"
-        android:inputType="text"
-        android:maxLines="1"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/extraLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Genre"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="4dp" />
+        android:hint="Name" />
 
     <EditText
         android:id="@+id/favoriteExtraEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter genre"
-        android:inputType="text"
-        android:maxLines="1" />
+        android:hint="Genre/Language" />
+
+    <Button
+        android:id="@+id/uploadAudioButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Upload Audio File" />
+
 </LinearLayout>
