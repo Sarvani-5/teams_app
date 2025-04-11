@@ -11,6 +11,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
+import android.view.animation.AnimationSet
+import android.view.animation.AnimationUtils
+import android.view.animation.TranslateAnimation
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -42,6 +45,13 @@ class MemberDetailActivity : AppCompatActivity() {
     private lateinit var playlistSeekBar: SeekBar
     private lateinit var playlistProgressText: TextView
 
+    // Member details views for animation
+    private lateinit var memberNameText: TextView
+    private lateinit var memberRoleText: TextView
+    private lateinit var memberDescriptionText: TextView
+    private lateinit var memberEmailText: TextView
+    private lateinit var memberPhoneText: TextView
+
     private lateinit var dbHelper: FavoritesDbHelper
     private var currentTab = "songs"
 
@@ -52,7 +62,12 @@ class MemberDetailActivity : AppCompatActivity() {
     private var currentMindset: String = "Happy"
     private var selectedMindset: String? = null
     private var memberName: String = ""
+    private var memberRole: String = ""
     private var selectedAudioPath: String? = null
+
+    // Animation manager
+    private lateinit var animationManager: MemberAnimationManager
+    private lateinit var memberAnimation: MemberAnimationManager.MemberAnimation
 
     companion object {
         private const val AUDIO_PICK_REQUEST_CODE = 1001
@@ -69,6 +84,9 @@ class MemberDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_member_detail)
 
+        // Initialize animation manager
+        animationManager = MemberAnimationManager(this)
+
         dbHelper = FavoritesDbHelper(this)
         sharedPreferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -81,6 +99,13 @@ class MemberDetailActivity : AppCompatActivity() {
         favoritesContainer = findViewById(R.id.favoritesContainer)
         addFavoriteButton = findViewById(R.id.addFavoriteButton)
 
+        // Initialize member details views
+        memberNameText = findViewById(R.id.memberName)
+        memberRoleText = findViewById(R.id.memberRole)
+        memberDescriptionText = findViewById(R.id.memberDescription)
+        memberEmailText = findViewById(R.id.memberEmail)
+        memberPhoneText = findViewById(R.id.memberPhone)
+
         // Initialize playlist views
         playlistStatusText = findViewById(R.id.playlistStatusText)
         playlistControlButton = findViewById(R.id.playlistControlButton)
@@ -89,29 +114,57 @@ class MemberDetailActivity : AppCompatActivity() {
 
         // Extract member details from intent
         memberName = intent.getStringExtra("MEMBER_NAME") ?: ""
-        val role = intent.getStringExtra("MEMBER_ROLE") ?: ""
+        memberRole = intent.getStringExtra("MEMBER_ROLE") ?: ""
         val email = intent.getStringExtra("MEMBER_EMAIL") ?: ""
         val phone = intent.getStringExtra("MEMBER_PHONE") ?: ""
         val description = intent.getStringExtra("MEMBER_DESCRIPTION") ?: ""
         val imageResId = intent.getIntExtra("MEMBER_IMAGE", 0)
 
-        // Set member details in views
+        // Get animation based on role
+        memberAnimation = animationManager.getAnimationForRole(memberRole)
+
+        // Set toolbar title
         findViewById<TextView>(R.id.toolbarTitle).text = memberName
-        findViewById<TextView>(R.id.memberName).text = memberName
-        findViewById<TextView>(R.id.memberRole).text = role
-        findViewById<TextView>(R.id.memberDescription).text = description
-        findViewById<TextView>(R.id.memberEmail).text = email
-        findViewById<TextView>(R.id.memberPhone).text = phone
-        findViewById<ImageView>(R.id.memberImage).setImageResource(imageResId)
+
+        // Initially hide the member details that we'll animate
+        memberNameText.visibility = View.INVISIBLE
+        memberRoleText.visibility = View.INVISIBLE
+        memberDescriptionText.visibility = View.INVISIBLE
+        memberEmailText.visibility = View.INVISIBLE
+        memberPhoneText.visibility = View.INVISIBLE
+
+        // Prepare member details (but don't show yet - will be animated)
+        memberNameText.text = memberName
+        memberRoleText.text = memberRole
+        memberDescriptionText.text = description
+        memberEmailText.text = email
+        memberPhoneText.text = phone
+
+        // Set image and apply animation
+        val memberImageView = findViewById<ImageView>(R.id.memberImage)
+        memberImageView.setImageResource(imageResId)
+        memberImageView.post {
+            memberAnimation.profileAnimation(memberImageView)
+
+            // Start member details animation after profile image animation
+            memberImageView.postDelayed({
+                animateMemberDetails()
+            }, 500)
+        }
 
         // Load and setup mindset
         loadCurrentMindset()
         setupMindsetChips()
 
-        // Mindset set button listener
+        // Mindset set button listener with animation
         setMindsetButton.setOnClickListener {
             if (selectedMindset != null) {
                 saveMindset(selectedMindset!!)
+
+                // Apply mindset animation
+                val animation = AnimationUtils.loadAnimation(this, memberAnimation.mindsetAnimation)
+                currentMindsetText.startAnimation(animation)
+
                 showConfirmationMessage("${memberName}'s mindset changed to ${selectedMindset}!")
             } else {
                 showConfirmationMessage("Please select a mindset first", isError = true)
@@ -137,6 +190,79 @@ class MemberDetailActivity : AppCompatActivity() {
 
         // Load initial favorites
         loadFavorites(currentTab)
+    }
+
+    private fun animateMemberDetails() {
+        // Animate each detail with staggered timing and different animations based on role
+        animateTextView(memberNameText, 0)
+        animateTextView(memberRoleText, 200)
+        animateTextView(memberDescriptionText, 400)
+        animateTextView(memberEmailText, 600)
+        animateTextView(memberPhoneText, 800)
+    }
+
+    private fun animateTextView(textView: TextView, delay: Long) {
+        textView.postDelayed({
+            textView.visibility = View.VISIBLE
+
+            // Create an animation set combining fade in and slide in
+            val animSet = AnimationSet(true)
+
+            // Fade in animation
+            val fadeIn = AlphaAnimation(0.0f, 1.0f)
+            fadeIn.duration = 800
+            animSet.addAnimation(fadeIn)
+
+            // Customize animation based on member role and which text view is being animated
+            val translateAnim = when {
+                // For member name
+                textView == memberNameText -> when (memberRole) {
+                    "Designer", "Artist" -> createTranslateAnimation(-0.5f, 0f, 0f, 0f)
+                    "Developer", "QA" -> createTranslateAnimation(0.5f, 0f, 0f, 0f)
+                    "Manager" -> createTranslateAnimation(0f, 0f, -0.5f, 0f)
+                    else -> createTranslateAnimation(0f, 0f, -0.3f, 0f)
+                }
+
+                // For member role
+                textView == memberRoleText -> when (memberRole) {
+                    "Designer", "Artist" -> createTranslateAnimation(0.5f, 0f, 0f, 0f)
+                    "Developer", "QA" -> createTranslateAnimation(-0.5f, 0f, 0f, 0f)
+                    "Marketing" -> createTranslateAnimation(0f, 0f, 0.5f, 0f)
+                    else -> createTranslateAnimation(0f, 0f, 0.3f, 0f)
+                }
+
+                // For description
+                textView == memberDescriptionText -> when (memberRole) {
+                    "Designer" -> createTranslateAnimation(-0.3f, 0f, 0f, 0f)
+                    "Developer" -> createTranslateAnimation(0.3f, 0f, 0f, 0f)
+                    "Manager" -> createTranslateAnimation(0f, 0f, 0.2f, 0f)
+                    else -> createTranslateAnimation(0f, 0f, 0.2f, 0f)
+                }
+
+                // For contact info (email and phone)
+                else -> when (memberRole) {
+                    "Designer", "Artist" -> createTranslateAnimation(-0.3f, 0f, 0f, 0f)
+                    "Developer", "QA" -> createTranslateAnimation(0.3f, 0f, 0f, 0f)
+                    "Manager", "Marketing" -> createTranslateAnimation(0f, 0f, 0.2f, 0f)
+                    else -> createTranslateAnimation(0.2f, 0f, 0f, 0f)
+                }
+            }
+
+            translateAnim.duration = 800
+            animSet.addAnimation(translateAnim)
+
+            // Apply animations
+            textView.startAnimation(animSet)
+        }, delay)
+    }
+
+    private fun createTranslateAnimation(fromX: Float, toX: Float, fromY: Float, toY: Float): TranslateAnimation {
+        return TranslateAnimation(
+            Animation.RELATIVE_TO_SELF, fromX,
+            Animation.RELATIVE_TO_SELF, toX,
+            Animation.RELATIVE_TO_SELF, fromY,
+            Animation.RELATIVE_TO_SELF, toY
+        )
     }
 
     private fun setupFavoritesTabLayout() {
@@ -165,7 +291,7 @@ class MemberDetailActivity : AppCompatActivity() {
             noFavoritesText.setPadding(16, 16, 16, 16)
             favoritesContainer.addView(noFavoritesText)
         } else {
-            for (favorite in favorites) {
+            for ((index, favorite) in favorites.withIndex()) {
                 val favoriteView = LayoutInflater.from(this).inflate(R.layout.item_favourite, null)
                 val nameText = favoriteView.findViewById<TextView>(R.id.favoriteName)
                 val extraText = favoriteView.findViewById<TextView>(R.id.favoriteExtra)
@@ -178,6 +304,15 @@ class MemberDetailActivity : AppCompatActivity() {
                 }
 
                 favoritesContainer.addView(favoriteView)
+
+                // Apply staggered animation to each favorite item
+                favoriteView.post {
+                    favoriteView.visibility = View.INVISIBLE
+                    favoriteView.postDelayed({
+                        favoriteView.visibility = View.VISIBLE
+                        memberAnimation.favoriteItemAnimation(favoriteView)
+                    }, 100L * index)
+                }
             }
         }
     }
@@ -313,6 +448,10 @@ class MemberDetailActivity : AppCompatActivity() {
             chip.setOnClickListener {
                 selectedMindset = mindset
                 updateSelectedChip(chipGroup, chip)
+
+                // Apply small animation to the selected chip
+                val pulse = AnimationUtils.loadAnimation(this, R.anim.pulse_animation)
+                chip.startAnimation(pulse)
             }
 
             chipGroup.addView(chip)

@@ -191,10 +191,14 @@ class MainActivity : AppCompatActivity() {
                 logoView.visibility = View.GONE
                 LocationTrackingFragment()
             }
-            // Add a new option to view system status logs
             R.id.menu_system_status -> {
                 logoView.visibility = View.GONE
                 SystemStatusFragment()
+            }
+            // Add the new menu option handler for custom graphics
+            R.id.menu_custom_graphics -> {
+                logoView.visibility = View.GONE
+                CustomGraphicsFragment()
             }
             else -> return super.onOptionsItemSelected(item)
         }
