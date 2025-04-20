@@ -24,6 +24,14 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.provider.MediaStore
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class TeamMembersFragment : Fragment() {
     // Data class to store member information
@@ -46,6 +54,41 @@ class TeamMembersFragment : Fragment() {
     // Currently selected member for context menu
     private var currentSelectedMember: MemberInfo? = null
 
+    // Profile picture update variables
+    private var selectedMemberIndex: Int = -1
+    private lateinit var photoFile: File
+    private var photoUri: Uri? = null
+
+    // Permission request constants
+    private val SMS_PERMISSION_REQUEST_CODE = 101
+    private val CAMERA_PERMISSION_REQUEST_CODE = 102
+    private val GALLERY_PERMISSION_REQUEST_CODE = 103
+
+    // Variables to store pending SMS info for after permission is granted
+    private var pendingSmsMessage: String? = null
+    private var pendingSmsMember: MemberInfo? = null
+
+    // Register activity result launchers
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && photoUri != null) {
+            saveProfilePicture(photoUri!!, selectedMemberIndex)
+        } else {
+            Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            saveProfilePicture(it, selectedMemberIndex)
+        } ?: run {
+            Toast.makeText(context, "No image selected", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -60,6 +103,15 @@ class TeamMembersFragment : Fragment() {
         checkAndInitializeData()
 
         return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // After the view is created and team members are loaded, update profile pics
+        teamMembers.forEach { member ->
+            updateMemberProfilePic(member.name)
+        }
     }
 
     private fun checkAndInitializeData() {
@@ -207,6 +259,11 @@ class TeamMembersFragment : Fragment() {
         setupMemberCards(view)
         setupPopupMenuButtons(view)
         setupContextMenus(view)
+
+        // Update profile pictures
+        teamMembers.forEach { member ->
+            updateMemberProfilePic(member.name)
+        }
     }
 
     private fun setupMemberCards(view: View) {
@@ -258,6 +315,11 @@ class TeamMembersFragment : Fragment() {
                             showContactOptions(teamMembers[i])
                             true
                         }
+                        R.id.popup_change_pic -> {
+                            selectedMemberIndex = i
+                            showChangeProfilePicOptions(teamMembers[i])
+                            true
+                        }
                         else -> false
                     }
                 }
@@ -294,7 +356,6 @@ class TeamMembersFragment : Fragment() {
         requireActivity().menuInflater.inflate(R.menu.team_member_context_menu, menu)
     }
 
-
     private fun showContactOptions(member: MemberInfo) {
         val options = arrayOf("Send Email", "Make Phone Call")
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -330,6 +391,7 @@ class TeamMembersFragment : Fragment() {
             Toast.makeText(requireContext(), "No phone app found", Toast.LENGTH_SHORT).show()
         }
     }
+
     override fun onContextItemSelected(item: MenuItem): Boolean {
         val member = currentSelectedMember ?: return false
 
@@ -350,10 +412,16 @@ class TeamMembersFragment : Fragment() {
                 sendWhatsAppMessage(member)
                 true
             }
+            R.id.context_change_pic -> {
+                selectedMemberIndex = teamMembers.indexOf(member)
+                showChangeProfilePicOptions(member)
+                true
+            }
             else -> super.onContextItemSelected(item)
         }
     }
 
+    // Move WhatsAppHelper functions directly into the class
     private fun sendWhatsAppMessage(member: MemberInfo) {
         // Create a dialog to compose the WhatsApp message
         val dialogView = LayoutInflater.from(requireContext())
@@ -381,11 +449,11 @@ class TeamMembersFragment : Fragment() {
 
                 if (message.isNotEmpty() && member.phone.isNotEmpty()) {
                     // Send WhatsApp message
-                    val success = WhatsAppHelper.sendWhatsAppMessage(requireContext(), member.phone, message)
+                    val success = sendWhatsAppMessageImpl(requireContext(), member.phone, message)
 
                     if (success) {
                         // Log the WhatsApp message
-                        WhatsAppHelper.logWhatsAppMessageSent(requireContext(), member.name, member.phone, message)
+                        logWhatsAppMessageSent(requireContext(), member.name, member.phone, message)
                     }
                 } else {
                     Toast.makeText(requireContext(), "Message cannot be empty", Toast.LENGTH_SHORT).show()
@@ -394,6 +462,36 @@ class TeamMembersFragment : Fragment() {
             .setNegativeButton("Cancel", null)
             .create()
             .show()
+    }
+
+    // Renamed WhatsAppHelper functions to avoid conflicts
+    private fun sendWhatsAppMessageImpl(context: Context, phoneNumber: String, message: String): Boolean {
+        val sanitizedNumber = phoneNumber.replace(" ", "").replace("-", "")
+
+        // Create intent with WhatsApp package
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = Uri.parse("https://api.whatsapp.com/send?phone=$sanitizedNumber&text=${Uri.encode(message)}")
+            setPackage("com.whatsapp")
+        }
+
+        return try {
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            Log.e("TeamMembersFragment", "WhatsApp not installed or error: ${e.message}")
+            Toast.makeText(context, "WhatsApp not installed or error occurred", Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
+
+    private fun logWhatsAppMessageSent(context: Context, memberName: String, phoneNumber: String, message: String) {
+        val whatsappPrefs = context.getSharedPreferences("WhatsAppLog", Context.MODE_PRIVATE)
+        val timestamp = System.currentTimeMillis()
+        val editor = whatsappPrefs.edit()
+
+        // Store the message details
+        editor.putString("whatsapp_$timestamp", "$memberName|$phoneNumber|$message")
+        editor.apply()
     }
 
     private fun sendSmsAlert(member: MemberInfo) {
@@ -469,11 +567,6 @@ class TeamMembersFragment : Fragment() {
         editor.apply()
     }
 
-    // Variables to store pending SMS info for after permission is granted
-    private var pendingSmsMessage: String? = null
-    private var pendingSmsMember: MemberInfo? = null
-    private val SMS_PERMISSION_REQUEST_CODE = 101
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -481,24 +574,41 @@ class TeamMembersFragment : Fragment() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == SMS_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, send the pending SMS
-                pendingSmsMember?.let { member ->
-                    pendingSmsMessage?.let { message ->
-                        sendSms(member.phone, message, member.name)
+        when (requestCode) {
+            SMS_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, send the pending SMS
+                    pendingSmsMember?.let { member ->
+                        pendingSmsMessage?.let { message ->
+                            sendSms(member.phone, message, member.name)
 
-                        // Clear pending data
-                        pendingSmsMessage = null
-                        pendingSmsMember = null
+                            // Clear pending data
+                            pendingSmsMessage = null
+                            pendingSmsMember = null
+                        }
                     }
+                } else {
+                    // Permission denied
+                    Toast.makeText(requireContext(), "SMS permission denied", Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                // Permission denied
-                Toast.makeText(requireContext(), "SMS permission denied", Toast.LENGTH_SHORT).show()
+            }
+            CAMERA_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    dispatchTakePictureIntent()
+                } else {
+                    Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show()
+                }
+            }
+            GALLERY_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    pickImageLauncher.launch("image/*")
+                } else {
+                    Toast.makeText(requireContext(), "Gallery permission denied", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
+
     private fun navigateToMemberDetail(member: MemberInfo) {
         val intent = Intent(activity, MemberDetailActivity::class.java).apply {
             putExtra("MEMBER_NAME", member.name)
@@ -509,5 +619,164 @@ class TeamMembersFragment : Fragment() {
             putExtra("MEMBER_IMAGE", member.imageResId)
         }
         startActivity(intent)
+    }
+
+    // Profile picture handling functions
+    private fun showChangeProfilePicOptions(member: MemberInfo) {
+        val options = arrayOf("Take Photo", "Choose from Gallery")
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Change profile picture for ${member.name}")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> checkCameraPermissionAndTakePhoto()
+                    1 -> checkGalleryPermissionAndPickImage()
+                }
+            }
+            .show()
+    }
+
+    private fun checkCameraPermissionAndTakePhoto() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Request camera permission
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.CAMERA),
+                CAMERA_PERMISSION_REQUEST_CODE
+            )
+        } else {
+            // Camera permission already granted
+            dispatchTakePictureIntent()
+        }
+    }
+
+    private fun checkGalleryPermissionAndPickImage() {
+        // For Android 10+ we don't need READ_EXTERNAL_STORAGE permission for picking images
+        // For older versions, we check for permission
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                GALLERY_PERMISSION_REQUEST_CODE
+            )
+        } else {
+            // Permission already granted or not needed
+            pickImageLauncher.launch("image/*")
+        }
+    }
+
+    private fun dispatchTakePictureIntent() {
+        val context = requireContext()
+        // Create file for the photo
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir = context.getExternalFilesDir(null) ?: context.filesDir
+
+        try {
+            photoFile = File.createTempFile(
+                "JPEG_${timeStamp}_",  // prefix
+                ".jpg",                 // suffix
+                storageDir              // directory
+            )
+
+            photoUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                photoFile
+            )
+
+            // Launch camera with the URI
+            takePictureLauncher.launch(photoUri)
+        } catch (ex: IOException) {
+            Log.e("TeamMembersFragment", "Error creating photo file", ex)
+            Toast.makeText(
+                context,
+                "Error creating photo file: ${ex.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun saveProfilePicture(imageUri: Uri, memberIndex: Int) {
+        if (memberIndex < 0 || memberIndex >= teamMembers.size) {
+            Log.e("TeamMembersFragment", "Invalid member index: $memberIndex")
+            return
+        }
+
+        val member = teamMembers[memberIndex]
+
+        try {
+            // Save image URI to SharedPreferences
+            val profilePrefs = requireContext().getSharedPreferences("ProfilePictures", Context.MODE_PRIVATE)
+            profilePrefs.edit().putString(member.name, imageUri.toString()).apply()
+
+            // Update UI
+            updateMemberProfilePic(member.name)
+
+            Toast.makeText(
+                requireContext(),
+                "Profile picture updated for ${member.name}",
+                Toast.LENGTH_SHORT
+            ).show()
+        } catch (e: Exception) {
+            Log.e("TeamMembersFragment", "Error saving profile picture", e)
+            Toast.makeText(
+                requireContext(),
+                "Failed to save profile picture: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun updateMemberProfilePic(memberName: String) {
+        val view = view ?: return
+        val memberIndex = teamMembers.indexOfFirst { it.name == memberName }
+        if (memberIndex < 0) return
+
+        // Get the image view based on member index
+        val imageViewId = when (memberIndex) {
+            0 -> R.id.member1Image
+            1 -> R.id.member2Image
+            2 -> R.id.member3Image
+            else -> return
+        }
+
+        val imageView = view.findViewById<ImageView>(imageViewId)
+
+        // Get saved image URI
+        val profilePrefs = requireContext().getSharedPreferences("ProfilePictures", Context.MODE_PRIVATE)
+        val savedImageUri = profilePrefs.getString(memberName, null)
+
+        if (!savedImageUri.isNullOrEmpty()) {
+            try {
+                val uri = Uri.parse(savedImageUri)
+                imageView.setImageURI(null) // Clear the image view first
+                imageView.setImageURI(uri)   // Set the new image
+            } catch (e: Exception) {
+                // If loading fails, use default image
+                imageView.setImageResource(teamMembers[memberIndex].imageResId)
+                Log.e("TeamMembersFragment", "Error loading profile image: ${e.message}")
+            }
+        } else {
+            // No custom image, use default
+            imageView.setImageResource(teamMembers[memberIndex].imageResId)
+        }
+    }
+
+    // Override onResume to ensure profile pictures are loaded when returning to the fragment
+    override fun onResume() {
+        super.onResume()
+
+        // Update all profile pictures
+        teamMembers.forEach { member ->
+            updateMemberProfilePic(member.name)
+        }
     }
 }

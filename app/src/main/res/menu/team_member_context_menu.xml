@@ -8,8 +8,11 @@
         android:title="Call" />
     <item
         android:id="@+id/context_send_sms"
-        android:title="Send Alert SMS" />
+        android:title="Send SMS" />
     <item
         android:id="@+id/context_send_whatsapp"
-        android:title="Send WhatsApp Message" />
+        android:title="Send WhatsApp" />
+    <item
+        android:id="@+id/context_change_pic"
+        android:title="Change Profile Pic" />
 </menu>

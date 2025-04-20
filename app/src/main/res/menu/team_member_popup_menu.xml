@@ -6,4 +6,7 @@
     <item
         android:id="@+id/popup_contact"
         android:title="Contact" />
+    <item
+        android:id="@+id/popup_change_pic"
+        android:title="Change Profile Pic" />
 </menu>
